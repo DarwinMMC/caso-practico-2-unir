@@ -1,0 +1,4 @@
+- import_playbook: ./install.yaml
+- import_playbook: ./acr.yaml
+- import_playbook: ./webserver.yaml
+- import_playbook: ./aks.yaml

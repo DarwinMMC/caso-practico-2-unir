@@ -1,0 +1,20 @@
+---
+- name: run web server
+  hosts: vm_1
+  become: yes
+  vars_files:
+    - vars.yaml
+  tasks:
+    - name: acr login
+      containers.podman.podman_login:
+        username: "{{acr_user}}"
+        password: "{{acr_password}}"
+        registry: "{{acr}}"
+
+    - name: "run image"
+      containers.podman.podman_container:
+        image: "{{acr}}/counterapp:casopractico2"
+        name: webserver
+        restart_policy: always
+        ports:
+          - "443:443"

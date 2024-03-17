@@ -1,0 +1,146 @@
+- name: supply aks
+  hosts: 127.0.0.1
+  vars_files:
+    - vars.yaml
+  tasks:
+    - name: Create a k8s namespace
+      kubernetes.core.k8s:
+        name: testing
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: pvc
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: pvc-azuredisk
+            namespace: testing
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+            storageClassName: managed-csi
+
+    - name: pvc
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: mysql-initdb-config
+            namespace: testing
+          data:
+            initdb.sql: |
+              USE counter;
+              CREATE TABLE counted (value INT NOT NULL);
+              INSERT INTO counted (value) VALUES (0);
+
+    - name: mysql
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mysql
+            namespace: testing
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: mysql
+            template:
+              metadata:
+                labels:
+                  app: mysql
+              spec:
+                containers:
+                  - name: mysql
+                    image: mysql
+                    env:
+                      - name: MYSQL_ROOT_PASSWORD
+                        value: password@123
+                      - name: MYSQL_DATABASE
+                        value: counter
+                    ports:
+                      - containerPort: 3306
+                    volumeMounts:
+                      - name: api-volume
+                        mountPath: /var/lib/mysql
+                      - name: mysql-initdb
+                        mountPath: /docker-entrypoint-initdb.d
+                volumes:
+                  - name: api-volume
+                    persistentVolumeClaim:
+                      claimName: pvc-azuredisk
+                  - name: mysql-initdb
+                    configMap:
+                      name: mysql-initdb-config
+    - name: service mysql
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: mysql-service
+            namespace: testing
+          spec:
+            type: ClusterIP
+            selector:
+              app: mysql
+            ports:
+              - port: 3306
+                targetPort: 3306
+
+    - name: deployment api
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: deployment-counter-list
+            namespace: testing
+            labels:
+              deployment: counter-list
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: counter-list
+            template:
+              metadata:
+                name: counter-list
+                labels:
+                  app: counter-list
+              spec:
+                containers:
+                  - name: counter-list
+                    image: "docker.io/darwinmmc/counter_save:casopractico2"
+                    ports:
+                      - containerPort: 4000
+
+    - name: service loadbalancer
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: counter-list-service
+            namespace: testing
+          spec:
+            type: LoadBalancer
+            selector:
+              app: counter-list
+            ports:
+              - port: 4000
+                targetPort: 4000

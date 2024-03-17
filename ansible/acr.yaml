@@ -1,0 +1,43 @@
+- name: Install Podman
+  hosts: vm_1
+  become: yes
+  vars_files:
+    - vars.yaml
+  tasks:
+    - name: "pull image counterapp"
+      containers.podman.podman_image:
+        name: docker.io/darwinmmc/counterapp:casopractico2
+
+    - name: "tag image counterapp"
+      containers.podman.podman_tag:
+        image: docker.io/darwinmmc/counterapp:casopractico2
+        target_names:
+          - "counterapp:casopractico2"
+
+    - name: "push image counterapp"
+      containers.podman.podman_image:
+        name: "counterapp:casopractico2"
+        push: true
+        username: "{{acr_user}}"
+        password: "{{acr_password}}"
+        push_args:
+          dest: "{{acr}}/counterapp:casopractico2"
+
+    - name: "pull image counter_save"
+      containers.podman.podman_image:
+        name: docker.io/darwinmmc/counter_save:casopractico2
+
+    - name: "tag image counter_save"
+      containers.podman.podman_tag:
+        image: docker.io/darwinmmc/counter_save:casopractico2
+        target_names:
+          - "counter_save:casopractico2"
+
+    - name: "push image counter_save"
+      containers.podman.podman_image:
+        name: "counter_save:casopractico2"
+        push: true
+        username: "{{acr_user}}"
+        password: "{{acr_password}}"
+        push_args:
+          dest: "{{acr}}/counter_save:casopractico2"
