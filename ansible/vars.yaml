@@ -1,3 +1,4 @@
-acr_user:
+acr_user: containerRegistryDarwin
 acr_password: 
-acr: 
+acr: containerregistrydarwin.azurecr.io
+mysql_password: password@123
